@@ -2,7 +2,6 @@
 
 Version 2.x
 
-[![CircleCI](https://circleci.com/gh/terminus-plugin-project/terminus-autocomplete-plugin.svg?style=shield)](https://circleci.com/gh/terminus-plugin-project/terminus-autocomplete-plugin)
 [![Terminus v2.x Compatible](https://img.shields.io/badge/terminus-v2.x-green.svg)](https://github.com/terminus-plugin-project/terminus-autocomplete-plugin/tree/2.x)
 
 A Terminus plugin to help provide tab completion for commands.
@@ -49,7 +48,7 @@ You will be provided with instructions to guide you through the process.
 
 ## Help:
 
-Type 'terminus help autocomplete:install|check|test|update' for help.
+Run `terminus help autocomplete:[install|check|test|update]` for help.
 
 ## Credit:
 
