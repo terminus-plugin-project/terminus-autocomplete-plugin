@@ -1,0 +1,34 @@
+{
+    "name": "terminus-plugin-project/terminus-autocomplete-plugin",
+    "description": "Autocomplete - A Terminus plugin to help provide tab completion for commands.",
+    "authors": [
+        {
+            "name": "Ed Reel",
+            "email": "edreel@gmail.com",
+            "homepage": "https://github.com/uberhacker",
+            "role": "Developer"
+        }
+    ],
+    "type": "terminus-plugin",
+    "keywords": [
+        "pantheon",
+        "terminus",
+        "autocomplete",
+        "plugin"
+    ],
+    "support": {
+        "issues": "https://github.com/terminus-plugin-project/terminus-autocomplete-plugin/issues"
+    },
+    "license": "MIT",
+    "require": {
+        "php": "^5.5 || ^7.0"
+    },
+    "autoload": {
+        "psr-4": { "TerminusPluginProject\\TerminusAutocomplete\\": "src" }
+    },
+    "extra": {
+        "terminus": {
+            "compatible-version": "^2"
+        }
+    }
+}
