@@ -26,19 +26,16 @@ class AutocompleteCommand extends TerminusCommand
     public function install()
     {
         $this->checkRequirements();
-        $message = "To complete the installation, paste in the terminal the following:\n\n";
-        $message .= "terminus autocomplete:update\n";
-        if (TERMINUS_OS == 'DAR') {
-            $message .= "echo 'source \$(brew --prefix)/etc/bash_completion' >> ~/.bash_profile\n";
-            $message .= "echo 'source ~/.terminus-autocomplete' >> ~/.bash_profile\n";
-            $message .= "source ~/.bash_profile\n";
-        } else {
-            $message .= "echo 'source /etc/bash_completion' >> ~/.bashrc\n";
-            $message .= "echo 'source ~/.terminus-autocomplete' >> ~/.bashrc\n";
-            $message .= "source ~/.bashrc\n";
+        $prefix = (TERMINUS_OS == 'DAR') ? '\$(brew --prefix)' : '';
+        $bashrc = (TERMINUS_OS == 'DAR') ? '.bash_profile' : '.bashrc';
+        $message = "To complete the installation, paste in the terminal the following:" . PHP_EOL;
+        $message .= PHP_EOL . "echo 'source ${prefix}/etc/bash_completion' >> ~/${bashrc}" . PHP_EOL;
+        $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
+        if (file_exists($terminus_autocomplete)) {
+            $message .= "echo 'source ~/.terminus-autocomplete' >> ~/${bashrc}" . PHP_EOL;
         }
-        $message .= "terminus autocomplete:test";
         $this->log()->notice($message);
+        $this->update();
     }
 
     /**
@@ -51,7 +48,7 @@ class AutocompleteCommand extends TerminusCommand
     public function check()
     {
         $this->checkRequirements();
-        $message = "All requirements are installed.  Type 'terminus autocomplete:install' to complete.";
+        $message = PHP_EOL . "All requirements are installed.  Type 'terminus autocomplete:install' to complete." . PHP_EOL;
         $this->log()->notice($message);
     }
 
@@ -64,7 +61,7 @@ class AutocompleteCommand extends TerminusCommand
      */
     public function test()
     {
-        $message = "To test if autocomplete is working, type 'terminus auto<TAB>' and it should expand to 'terminus autocomplete:'.";
+        $message = PHP_EOL . "To test if autocomplete is working, type 'terminus auto<TAB>' and it should expand to 'terminus autocomplete:'." . PHP_EOL;
         $this->log()->notice($message);
     }
 
@@ -82,6 +79,47 @@ class AutocompleteCommand extends TerminusCommand
         $this->execute($command);
         $message = 'Terminus autocomplete commands have been updated.';
         $this->log()->notice($message);
+        $this->pantheon_site_environments();
+        $bashrc = (TERMINUS_OS == 'DAR') ? '.bash_profile' : '.bashrc';
+        $message = "To complete the update, execute the following:" . PHP_EOL;
+        $message .= PHP_EOL . "source ~/${bashrc}" . PHP_EOL;
+        $this->log()->notice($message);
+        $this->test();
+    }
+
+    /**
+     * Add Pantheon site environments to autocomplete.
+     */
+    protected function pantheon_site_environments()
+    {
+        $pantheon_aliases = getenv('HOME') . '/.drush/site-aliases/pantheon.aliases.drushrc.php';
+        if (!file_exists($pantheon_aliases)) {
+            $message = PHP_EOL . "Optional: Install Drush site aliases to add Pantheon site environments to autocomplete." . PHP_EOL;
+            $message .= "See https://pantheon.io/docs/drush/#download-drush-aliases-locally for more information." . PHP_EOL;
+            $this->log()->notice($message);
+        } else {
+            if (!$this->commandExists('drush')) {
+                $message = "Please install Drush to add Pantheon site environments to autocomplete. Run 'cgr drush/drush' to install." . PHP_EOL;
+                $message .= "See http://docs.drush.org/en/master/install/ for alternative ways to install.";
+                throw new TerminusNotFoundException($message);
+            }
+            $sites = shell_exec("drush sa | grep @pantheon. | cut -d'.' -f2,3 | xargs");
+            $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
+            $lines = file($terminus_autocomplete, FILE_IGNORE_NEW_LINES);
+            $line = shell_exec("rgrep -n '^}' ${terminus_autocomplete} | cut -d':' -f1");
+            $line = trim(preg_replace('/[\n|\r]/', '', $line)) - 1;
+            $lines[$line] = "    prev=\${COMP_WORDS[COMP_CWORD-1]}";
+            $lines[$line + 1] = "    if [[ \$prev == \"drush\" ]]; then";
+            $lines[$line + 2] = "        sites=\"${sites}\"";
+            $lines[$line + 3] = "        COMPREPLY=(\$(compgen -W \"\${sites}\" -- \${cur}))";
+            $lines[$line + 4] = "        return 0";
+            $lines[$line + 5] = "    fi";
+            $lines[$line + 6] = "}";
+            $lines[$line + 7] = "complete -o default -F _terminus terminus";
+            file_put_contents($terminus_autocomplete, implode(PHP_EOL, $lines));
+            $message = "Site environments have been added to autocomplete.";
+            $this->log()->notice($message);
+        }
     }
 
     /**
@@ -104,7 +142,7 @@ class AutocompleteCommand extends TerminusCommand
     /**
      * Platform independent check whether a command exists.
      *
-     * @param string $command Command to check
+     * @param  string $command Command to check
      * @return bool True if exists, false otherwise
      */
     protected function commandExists($command)
@@ -127,14 +165,15 @@ class AutocompleteCommand extends TerminusCommand
                 $message = 'Please install brew to continue.  See https://brew.sh.';
                 throw new TerminusNotFoundException($message);
             }
-            $prefix = $this->execute("$(brew --prefix)");
+            $prefix = shell_exec("$(brew --prefix)");
+            $prefix = trim(preg_replace('/[\n|\r]/', '', $prefix));
         }
         $bash_completion = "${prefix}/etc/bash_completion";
         if (!file_exists("$bash_completion")) {
-            $message = "Please install bash-completion to continue.\n";
-            $message .= "       macOS: brew install bash-completion\n";
-            $message .= "  Arch-based: sudo pacman -S bash-completion\n";
-            $message .= "Debian-based: sudo apt install bash-completion\n";
+            $message = "Please install bash-completion to continue." . PHP_EOL;
+            $message .= "       MacOS: brew install bash-completion" . PHP_EOL;
+            $message .= "  Arch-based: sudo pacman -S bash-completion" . PHP_EOL;
+            $message .= "Debian-based: sudo apt install bash-completion" . PHP_EOL;
             $message .= "Redhat-based: sudo yum install bash-completion";
             throw new TerminusNotFoundException($message);
         }
@@ -147,8 +186,8 @@ class AutocompleteCommand extends TerminusCommand
             throw new TerminusNotFoundException($message);
         }
         if (!$this->commandExists('symfony-autocomplete')) {
-            $message = "Please install symfony-autocomplete to continue.\n";
-            $message .= "Install with 'cgr bamarni/symfony-console-autocomplete'.\n";
+            $message = "Please install symfony-autocomplete to continue." . PHP_EOL;
+            $message .= "Install with 'cgr bamarni/symfony-console-autocomplete'." . PHP_EOL;
             $message .= "Make sure '\$HOME/.config/composer/vendor/bin' is in your PATH.";
             throw new TerminusNotFoundException($message);
         }
