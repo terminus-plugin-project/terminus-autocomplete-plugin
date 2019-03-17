@@ -26,7 +26,7 @@ class AutocompleteCommand extends TerminusCommand
     public function install()
     {
         $this->checkRequirements();
-        $prefix = (TERMINUS_OS == 'DAR') ? '\$(brew --prefix)' : '';
+        $prefix = (TERMINUS_OS == 'DAR') ? '$(brew --prefix)' : '';
         $bashrc = (TERMINUS_OS == 'DAR') ? '.bash_profile' : '.bashrc';
         $message = "To complete the installation, paste in the terminal the following:" . PHP_EOL;
         $message .= PHP_EOL . "echo 'source ${prefix}/etc/bash_completion' >> ~/${bashrc}" . PHP_EOL;
@@ -106,7 +106,7 @@ class AutocompleteCommand extends TerminusCommand
             $sites = shell_exec("drush sa | grep @pantheon. | cut -d'.' -f2,3 | xargs");
             $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
             $lines = file($terminus_autocomplete, FILE_IGNORE_NEW_LINES);
-            $line = shell_exec("rgrep -n '^}' ${terminus_autocomplete} | cut -d':' -f1");
+            $line = shell_exec("grep -n '^}' ${terminus_autocomplete} | cut -d':' -f1");
             $line = trim(preg_replace('/[\n|\r]/', '', $line)) - 1;
             $lines[$line] = "    prev=\${COMP_WORDS[COMP_CWORD-1]}";
             $lines[$line + 1] = "    if [[ \$prev == \"drush\" ]]; then";
@@ -165,7 +165,7 @@ class AutocompleteCommand extends TerminusCommand
                 $message = 'Please install brew to continue.  See https://brew.sh.';
                 throw new TerminusNotFoundException($message);
             }
-            $prefix = shell_exec("$(brew --prefix)");
+            $prefix = shell_exec("brew --prefix");
             $prefix = trim(preg_replace('/[\n|\r]/', '', $prefix));
         }
         $bash_completion = "${prefix}/etc/bash_completion";
