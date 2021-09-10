@@ -28,14 +28,18 @@ class AutocompleteCommand extends TerminusCommand
         $this->checkRequirements();
         $prefix = (TERMINUS_OS == 'DAR') ? '$(brew --prefix)' : '';
         $bashrc = (TERMINUS_OS == 'DAR') ? '.bash_profile' : '.bashrc';
-        $message = "To complete the installation, paste in the terminal the following:" . PHP_EOL;
-        $message .= PHP_EOL . "echo 'source ${prefix}/etc/bash_completion' >> ~/${bashrc}" . PHP_EOL;
         $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
-        if (file_exists($terminus_autocomplete)) {
-            $message .= "echo 'source ~/.terminus-autocomplete' >> ~/${bashrc}" . PHP_EOL;
+        if (!file_exists($terminus_autocomplete)) {
+            $message = "To complete the installation, paste in the terminal the following:" . PHP_EOL;
+            $message .= PHP_EOL . "echo 'source ${prefix}/etc/bash_completion' >> ~/${bashrc}" . PHP_EOL;
+            $message .= "echo 'source ${terminus_autocomplete}' >> ~/${bashrc}" . PHP_EOL;
+            $this->log()->notice($message);
+            $this->update($force = true);
         }
-        $this->log()->notice($message);
-        $this->update();
+        else {
+            $message = PHP_EOL . "Terminus autocomplete is already installed." . PHP_EOL;
+            $this->log()->notice($message);
+        }
     }
 
     /**
@@ -48,7 +52,13 @@ class AutocompleteCommand extends TerminusCommand
     public function check()
     {
         $this->checkRequirements();
-        $message = PHP_EOL . "All requirements are installed.  Type 'terminus autocomplete:install' to complete." . PHP_EOL;
+        $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
+        if (file_exists($terminus_autocomplete)) {
+            $message = PHP_EOL . "All requirements are installed.  Type 'terminus autocomplete:test' to check if it is working." . PHP_EOL;
+        }
+        else {
+            $message = PHP_EOL . "All requirements are installed.  Type 'terminus autocomplete:install' to complete." . PHP_EOL;
+        }
         $this->log()->notice($message);
     }
 
@@ -61,7 +71,13 @@ class AutocompleteCommand extends TerminusCommand
      */
     public function test()
     {
-        $message = PHP_EOL . "To test if autocomplete is working, type 'terminus auto<TAB>' and it should expand to 'terminus autocomplete:'." . PHP_EOL;
+        $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
+        if (file_exists($terminus_autocomplete)) {
+            $message = PHP_EOL . "To test if autocomplete is working, type 'terminus auto<TAB>' and it should expand to 'terminus autocomplete:'." . PHP_EOL;
+        }
+        else {
+            $message = PHP_EOL . "Terminus autocomplete is not installed. Type 'terminus autocomplete:install' to complete." . PHP_EOL;
+        }
         $this->log()->notice($message);
     }
 
@@ -72,19 +88,27 @@ class AutocompleteCommand extends TerminusCommand
      *
      * @aliases ac:update
      */
-    public function update()
+    public function update($force = false)
     {
-        $this->checkRequirements();
-        $command = 'symfony-autocomplete terminus > ~/.terminus-autocomplete';
-        $this->execute($command);
-        $message = 'Terminus autocomplete commands have been updated.';
-        $this->log()->notice($message);
-        $this->pantheon_site_environments();
-        $bashrc = (TERMINUS_OS == 'DAR') ? '.bash_profile' : '.bashrc';
-        $message = "To complete the update, execute the following:" . PHP_EOL;
-        $message .= PHP_EOL . "source ~/${bashrc}" . PHP_EOL;
-        $this->log()->notice($message);
-        $this->test();
+        $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
+        if (file_exists($terminus_autocomplete) || $force) {
+            $this->checkRequirements();
+            $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
+            $command = "symfony-autocomplete terminus > $terminus_autocomplete";
+            $this->execute($command);
+            $message = 'Terminus autocomplete commands have been updated.';
+            $this->log()->notice($message);
+            $this->pantheon_site_environments();
+            $bashrc = (TERMINUS_OS == 'DAR') ? '.bash_profile' : '.bashrc';
+            $message = "To complete the update, execute the following:" . PHP_EOL;
+            $message .= PHP_EOL . "source ~/${bashrc}" . PHP_EOL;
+            $this->log()->notice($message);
+            $this->test();
+        }
+        else {
+            $message = PHP_EOL . "Terminus autocomplete is not installed. Type 'terminus autocomplete:install' to complete." . PHP_EOL;
+            $this->log()->notice($message);
+        }
     }
 
     /**
@@ -92,8 +116,19 @@ class AutocompleteCommand extends TerminusCommand
      */
     protected function pantheon_site_environments()
     {
-        $pantheon_aliases = getenv('HOME') . '/.drush/site-aliases/pantheon.aliases.drushrc.php';
-        if (!file_exists($pantheon_aliases)) {
+        $pantheon_aliases = false;
+        $pantheon_aliases_locations = [
+            getenv('HOME') . '/.drush/sites/pantheon',
+            getenv('HOME') . '/.drush/pantheon.aliases.drushrc.php',
+            getenv('HOME') . '/.drush/site-aliases/pantheon.aliases.drushrc.php',
+        ];
+        foreach ($pantheon_aliases_locations as $location) {
+            if (file_exists($location)) {
+                $pantheon_aliases = true;
+                break;
+            }
+        }
+        if (!$pantheon_aliases) {
             $message = PHP_EOL . "Optional: Install Drush site aliases to add Pantheon site environments to autocomplete." . PHP_EOL;
             $message .= "See https://pantheon.io/docs/drush/#download-drush-aliases-locally for more information." . PHP_EOL;
             $this->log()->notice($message);
@@ -103,7 +138,7 @@ class AutocompleteCommand extends TerminusCommand
                 $message .= "See http://docs.drush.org/en/master/install/ for alternative ways to install.";
                 throw new TerminusNotFoundException($message);
             }
-            $sites = shell_exec("drush sa | grep @pantheon. | cut -d'.' -f2,3 | xargs");
+            $sites = shell_exec("drush sa | grep @pantheon. | sed -e \"s/'//g\" | sed -e \"s/://g\" | cut -d'.' -f2,3 | xargs");
             $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
             $lines = file($terminus_autocomplete, FILE_IGNORE_NEW_LINES);
             $line = shell_exec("grep -n '^}' ${terminus_autocomplete} | cut -d':' -f1");
