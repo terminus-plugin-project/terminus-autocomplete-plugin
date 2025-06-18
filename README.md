@@ -28,7 +28,7 @@ Learn more about [Terminus](https://pantheon.io/docs/terminus/) and [Terminus Pl
 
 ## Installation:
 
-To install this plugin using Terminus 3:
+To install this plugin using Terminus 3+:
 ```
 terminus self:plugin:install terminus-plugin-project/terminus-autocomplete-plugin
 ```
