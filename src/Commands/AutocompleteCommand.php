@@ -31,8 +31,8 @@ class AutocompleteCommand extends TerminusCommand
         $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
         if (!file_exists($terminus_autocomplete)) {
             $message = "To complete the installation, paste in the terminal the following:" . PHP_EOL;
-            $message .= PHP_EOL . "echo 'source ${prefix}/etc/bash_completion' >> ~/${bashrc}" . PHP_EOL;
-            $message .= "echo 'source ${terminus_autocomplete}' >> ~/${bashrc}" . PHP_EOL;
+            $message .= PHP_EOL . "echo 'source {$prefix}/etc/bash_completion' >> ~/{$bashrc}" . PHP_EOL;
+            $message .= "echo 'source ${terminus_autocomplete}' >> ~/{$bashrc}" . PHP_EOL;
             $this->log()->notice($message);
             $this->update($force = true);
         }
@@ -101,7 +101,7 @@ class AutocompleteCommand extends TerminusCommand
             $this->pantheon_site_environments();
             $bashrc = (TERMINUS_OS == 'DAR') ? '.bash_profile' : '.bashrc';
             $message = "To complete the update, execute the following:" . PHP_EOL;
-            $message .= PHP_EOL . "source ~/${bashrc}" . PHP_EOL;
+            $message .= PHP_EOL . "source ~/{$bashrc}" . PHP_EOL;
             $this->log()->notice($message);
             $this->test();
         }
@@ -141,11 +141,11 @@ class AutocompleteCommand extends TerminusCommand
             $sites = shell_exec("drush sa | grep @pantheon. | sed -e \"s/'//g\" | sed -e \"s/://g\" | cut -d'.' -f2,3 | xargs");
             $terminus_autocomplete = getenv('HOME') . '/.terminus-autocomplete';
             $lines = file($terminus_autocomplete, FILE_IGNORE_NEW_LINES);
-            $line = shell_exec("grep -n '^}' ${terminus_autocomplete} | cut -d':' -f1");
+            $line = shell_exec("grep -n '^}' {$terminus_autocomplete} | cut -d':' -f1");
             $line = trim(preg_replace('/[\n|\r]/', '', $line)) - 1;
             $lines[$line] = "    prev=\${COMP_WORDS[COMP_CWORD-1]}";
             $lines[$line + 1] = "    if [[ \$prev == \"drush\" ]]; then";
-            $lines[$line + 2] = "        sites=\"${sites}\"";
+            $lines[$line + 2] = "        sites=\"{$sites}\"";
             $lines[$line + 3] = "        COMPREPLY=(\$(compgen -W \"\${sites}\" -- \${cur}))";
             $lines[$line + 4] = "        return 0";
             $lines[$line + 5] = "    fi";
@@ -203,7 +203,7 @@ class AutocompleteCommand extends TerminusCommand
             $prefix = shell_exec("brew --prefix");
             $prefix = trim(preg_replace('/[\n|\r]/', '', $prefix));
         }
-        $bash_completion = "${prefix}/etc/bash_completion";
+        $bash_completion = "{$prefix}/etc/bash_completion";
         if (!file_exists("$bash_completion")) {
             $message = "Please install bash-completion to continue." . PHP_EOL;
             $message .= "       MacOS: brew install bash-completion" . PHP_EOL;
